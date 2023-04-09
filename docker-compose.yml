@@ -8,11 +8,13 @@ services:
     environment:
       - BANK_WITH_PORT=bank-system:9090
       - POSTGRES_HOST=postgres:5432
+      - ISWYPLS_HOST=iswypls:9191
     # waiting for postgres
-    entrypoint: "bash -c '/opt/app/wait-for-it.sh $${POSTGRES_HOST} -- java -jar /opt/app/app.jar --bank.host.baseurl=http://$${BANK_WITH_PORT}'"
+    entrypoint: "bash -c '/opt/app/wait-for-it.sh $${POSTGRES_HOST} -- java -jar /opt/app/app.jar --iswypls.host.baseurl=http://$${ISWYPLS_HOST} --bank.host.baseurl=http://$${BANK_WITH_PORT}'"
     depends_on:
       - bank-system
       - postgres
+      - iswypls
 
 
   # the postgres DB to be connected to the backend (watch out: no volume specified, everything can be lost)
@@ -36,14 +38,6 @@ services:
     entrypoint: "bash -c '/opt/app/wait-for-it.sh $${SERVER_WITH_PORT} -- java -jar /opt/app/app.jar'"
     depends_on:
       - teamh-server
-    volumes:
-      - ./cli/scripts/demo.txt:/opt/app/demo.txt
-      - ./cli/scripts/register.txt:/opt/app/register.txt
-      - ./cli/scripts/settled-payment.txt:/opt/app/settled-payment.txt
-      - ./cli/scripts/fidelity-payment.txt:/opt/app/fidelity-payment.txt
-      - ./cli/scripts/discount-payment.txt:/opt/app/discount-payment.txt
-      - ./cli/scripts/full-payment-scripts.txt:/opt/app/full-payment-scripts.txt
-      - ./cli/scripts/payment-errors.txt:/opt/app/payment-errors.txt
     stdin_open: true
     tty: true
 
@@ -51,3 +45,8 @@ services:
   bank-system:
     image: teamh-bank
     container_name: bank
+
+  # An external Parking service in Python
+  iswypls:
+    image: i_saw_where_you_parked_last_summer
+    container_name: i_saw_where_you_parked_last_summer

@@ -1,13 +1,13 @@
 package fr.polytech.interfaces.fidelity;
 
-import fr.polytech.exceptions.CustomerNotFoundException;
 import fr.polytech.entities.Customer;
-import fr.polytech.entities.FidelityAccount;
-import java.util.List;
 
 public interface FidelityExplorer {
-    FidelityAccount findFidelityAccountByCustomer(Customer customer) throws CustomerNotFoundException;
 
-    FidelityAccount findFidelityAccountById(Long id) throws CustomerNotFoundException;
-    List<FidelityExplorer> getAllEligibleVFPCustomer();
+    /**
+     * Verify if the customer can become VFP
+     * @param customer to verify
+     * @return true if customer can become VFP
+     */
+    boolean checkIfPossibleToBecomeVfp(Customer customer);
 }

@@ -31,15 +31,15 @@ pipeline {
                         skipSteps = true
                         return
                     }
-                    try {
-                        sh 'docker stop bank'
-                        sh 'docker stop db'
-                        sh 'docker stop server'
-                        sh 'docker stop cli'
-                        sh 'docker rm bank db server cli'
-                    } catch (Exception e) {
-                        echo "no container to close"
-                    }
+                    sh 'docker ps'                
+                    try{sh 'docker stop i_saw_where_you_parked_last_summer'}catch (Exception e){echo "no container to close"}
+                    try{sh 'docker stop bank'}catch (Exception e){echo "no container to close"}
+                    try{sh 'docker stop db'}catch (Exception e){echo "no container to close"}
+                    try{sh 'docker stop server'}catch (Exception e){echo "no container to close"}
+                    try{sh 'docker stop cli'}catch (Exception e){echo "no container to close"}
+                    try{sh 'docker rm bank db server cli i_saw_where_you_parked_last_summer'}catch (Exception e){echo "no container to close"}
+                    try{sh 'docker rmi $(docker images --filter "dangling=true" -q --no-trunc)'}catch (Exception e){echo "no container to close"}
+
                 }
                
                 // Copying settings.xml into .m2 folder
@@ -58,14 +58,12 @@ pipeline {
                 script {
                     if(env.BRANCH_NAME != 'main'){
                         directories.each { directory ->
-                            stage ("Test $directory") {
-                                if(env.BRANCH_NAME == 'Develop'){
-                                    echo "$directory"
-                                    dir("./$directory") {
-                                        echo 'Testing...'
-                                        sh 'mvn test'
-                                    }
-                                }
+                            stage ("Test $directory") {                               
+                                echo "$directory"
+                                dir("./$directory") {
+                                    echo 'Testing...'
+                                    sh 'mvn test'
+                                }                               
                             }
                             stage ("Building $directory") {
                                 echo "$directory"
@@ -73,16 +71,7 @@ pipeline {
                                     echo 'Building...'
                                     sh 'mvn clean package'
                                 }
-                            }
-                            stage ("Deploy $directory") {
-                                if(env.BRANCH_NAME == 'Develop'){
-                                    echo "$directory"
-                                    dir("./$directory") {
-                                        echo 'Deploying...'
-                                        sh 'mvn deploy'
-                                    }
-                                }                                
-                            }
+                            }                            
                         }
                     }else{
                         directories.each { directory ->
@@ -123,7 +112,7 @@ pipeline {
                 }
             }
         }
-        stage('Pull ltest artifacts'){
+        stage('Pull latest artifacts'){
             when { 
                 branch 'main'
                 expression { "${skipSteps}" == 'false' } 
@@ -131,7 +120,7 @@ pipeline {
             steps {
                 script {
                     try {
-                        sh 'rmdir releases'
+                        sh 'rm -rf releases'
                     } catch (Exception e) {
                     echo "The directory doesn't exist"
                     }
@@ -159,38 +148,72 @@ pipeline {
             }
             steps {
                 script {
-                    directories.each { directory ->
+                    def last_backend_version = sh(returnStdout: true, script: 'python3 artifactory_pull/backend_latest_version.py').split("\n")[1]
+                    def last_cli_version = sh(returnStdout: true, script: 'python3 artifactory_pull/cli_latest_version.py').split("\n")[1]
+                    if( env.BRANCH_NAME == 'main'){     
+                        echo "Downloading cli (v${last_cli_version})"           
+                        echo "last_backend_version = ${last_backend_version} and last_cli_version = ${last_cli_version}"
+                        sh "cd"
+                    }
+                    else{
+                        directories.each { directory ->
                         stage ("Create $directory image") {
                             echo "$directory"
                             dir("./$directory") {
                                 echo 'Testing...'
-                                sh './build.sh'
+                                sh './build.sh '
+                                }
                             }
                         }
                     }
+                    
                 }
                 sh 'docker images'
             }
         }
         stage('Start containers') {            
             when { 
-                expression { "${containerWork}" == 'true' && "${skipSteps}" == 'false'} 
+                expression { "${containerWork}" == 'true' && "${skipSteps}" == 'false' &&  env.BRANCH_NAME != 'main'} 
             }
             steps{
                 sh 'docker ps'
                 sh './build-all.sh'
-                sh './run-all.sh'                        
+                sh './run-all.sh'
             }
         }
         stage('Test end to end') {
             when { 
-                expression { "${endToEndAvailable}" == 'true' && "${skipSteps}" == 'false' } }
+                expression { "${endToEndAvailable}" == 'true' && "${skipSteps}" == 'false' &&  env.BRANCH_NAME != 'main'} }
             steps {
                 sh 'apt-get install -y socat'
                 sh 'apt install -y python3-pip'
                 sh 'pip install psycopg2-binary'
                 sh 'docker ps'
-                sh 'python3 ./DevopsCli/endToEnd.py'
+                                              
+                dir("./DevopsCli"){
+                    sh 'python3 ./endToEnd.py'
+                    sh 'python3 ./endToEndVFP.py'
+                    sh 'python3 ./printBdContent.py'
+                }
+                
+            }
+        }
+        stage('Deploy artifacts') {
+            when { 
+                branch 'Develop'
+                expression { "${skipSteps}" == 'false' } 
+            }
+            steps {
+                echo "backend"
+                dir("./backend") {
+                    echo 'Deploying...'
+                    sh 'mvn deploy'
+                }
+                echo "cli"
+                dir("./cli") {
+                    echo 'Deploying...'
+                    sh 'mvn deploy'
+                }   
             }
         }
         stage('Export images on DockerHub (main)') {

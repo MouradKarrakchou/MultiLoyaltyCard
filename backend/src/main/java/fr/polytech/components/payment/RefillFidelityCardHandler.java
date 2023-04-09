@@ -1,6 +1,5 @@
 package fr.polytech.components.payment;
 
-import fr.polytech.connectors.externaldto.BankTransactionDTO;
 import fr.polytech.entities.Customer;
 import fr.polytech.exceptions.payment.NegativeAmountException;
 import fr.polytech.exceptions.payment.PaymentInBankException;
@@ -24,18 +23,17 @@ public class RefillFidelityCardHandler implements RefillFidelityCard {
         this.balanceModifier = balanceModifier;
     }
 
-    public Date refill(Customer customer, BankTransactionDTO transaction) throws NegativeAmountException, PaymentInBankException {
-        double amount = transaction.getAmount();
+    public Date refill(Customer customer, String creditCard, double amount) throws NegativeAmountException, PaymentInBankException {
 
         if(amount <= 0)
             throw new NegativeAmountException(amount);
 
-        if(!bank.refill(transaction))
+        if(!bank.refill(creditCard,amount))
             throw new PaymentInBankException(amount);
 
         Date bankTransactionDate = new Date();
 
-        balanceModifier.rechargeBalance(customer, transaction);
+        balanceModifier.rechargeBalance(customer, creditCard,amount);
 
         return bankTransactionDate;
     }

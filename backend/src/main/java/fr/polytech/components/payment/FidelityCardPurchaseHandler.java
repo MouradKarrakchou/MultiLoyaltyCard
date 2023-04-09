@@ -1,6 +1,5 @@
 package fr.polytech.components.payment;
 
-import fr.polytech.entities.Store;
 import fr.polytech.entities.item.Item;
 import fr.polytech.entities.item.Product;
 import fr.polytech.exceptions.NotEnoughBalanceException;
@@ -19,7 +18,7 @@ public class FidelityCardPurchaseHandler implements FidelityCardPurchase {
         this.balanceModifier= balanceModifier;
     }
     @Override
-    public Customer buyWithFidelityCard(Customer customer, Store store, Set<Item> shoppingList) throws NotEnoughBalanceException {
+    public Customer buyWithFidelityCard(Customer customer, Set<Item> shoppingList) throws NotEnoughBalanceException {
         double cashNeeded = computeRequiredCash(shoppingList);
         return balanceModifier.decreaseBalance(customer, cashNeeded);
     }

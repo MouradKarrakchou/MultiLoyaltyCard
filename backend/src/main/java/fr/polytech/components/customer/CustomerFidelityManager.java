@@ -1,8 +1,8 @@
 package fr.polytech.components.customer;
 
-import fr.polytech.connectors.externaldto.BankTransactionDTO;
+import fr.polytech.interfaces.advantage.VFPAdvantageModifier;
+import fr.polytech.interfaces.payment.PaymentExplorer;
 import fr.polytech.repository.CustomerRepository;
-import fr.polytech.exceptions.CustomerNotFoundException;
 import fr.polytech.exceptions.NotEnoughBalanceException;
 import fr.polytech.interfaces.fidelity.FidelityExplorer;
 import fr.polytech.interfaces.fidelity.PointModifier;
@@ -13,7 +13,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import javax.transaction.Transactional;
-import java.util.List;
 
 @Transactional
 @Component
@@ -21,35 +20,32 @@ public class CustomerFidelityManager implements FidelityExplorer, PointModifier,
 
     CustomerRepository customerRepository;
 
+    PaymentExplorer paymentExplorer;
+
+
+    VFPAdvantageModifier VFPAdvantageModifier;
+
     @Autowired
-    public CustomerFidelityManager(CustomerRepository customerRepository){
+    public CustomerFidelityManager(CustomerRepository customerRepository, PaymentExplorer paymentExplorer, VFPAdvantageModifier VFPAdvantageModifier){
         this.customerRepository = customerRepository;
+        this.paymentExplorer=paymentExplorer;
+        this.VFPAdvantageModifier = VFPAdvantageModifier;
     }
 
-    @Override
-    public FidelityAccount findFidelityAccountByCustomer(Customer customer) throws CustomerNotFoundException {
-        return null;
-    }
 
     @Override
-    public FidelityAccount findFidelityAccountById(Long id) throws CustomerNotFoundException {
-        return null;
+    public boolean checkIfPossibleToBecomeVfp(Customer customer) {
+        boolean hasReached10Payments = paymentExplorer.customerReached10Payments(customer);
+        if (hasReached10Payments) VFPAdvantageModifier.addCustomerToProgramVFP(customer);
+        return hasReached10Payments;
     }
 
-    @Override
-    public List<FidelityExplorer> getAllEligibleVFPCustomer() {
-        return null;
-    }
 
     @Override
     public Customer incrementPoints(Customer customer, float points) {
         FidelityAccount fidelityAccount = customer.getFidelityAccount();
-        System.out.println("Fidelity account found : " + fidelityAccount);
-        System.out.println("Ancien solde de point : " + fidelityAccount.getPoints());
-        System.out.println("On ajoute : " + Math.floor(points));
         fidelityAccount.setPoints((int) (fidelityAccount.getPoints() + Math.floor(points)));
-        System.out.println("Nouveau solde : " + fidelityAccount.getPoints());
-        return customerRepository.save(customer);
+       return customerRepository.save(customer);
     }
 
     @Override
@@ -71,10 +67,10 @@ public class CustomerFidelityManager implements FidelityExplorer, PointModifier,
     }
 
     @Override
-    public Customer rechargeBalance(Customer customer, BankTransactionDTO bankTransactionDTO) {
+    public Customer rechargeBalance(Customer customer, String creditCard, double amount) {
         FidelityAccount fidelityAccount = customer.getFidelityAccount();
         double balance = fidelityAccount.getBalance();
-        fidelityAccount.setBalance(balance + bankTransactionDTO.getAmount());
+        fidelityAccount.setBalance(balance + amount);
         return customerRepository.save(customer);
     }
 }

@@ -3,6 +3,7 @@ package fr.polytech.components.customer;
 import fr.polytech.exceptions.MailAlreadyUsedException;
 import fr.polytech.interfaces.customer.CustomerRegistration;
 import fr.polytech.entities.Customer;
+import fr.polytech.repository.CustomerAdvantageRepository;
 import fr.polytech.repository.CustomerRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -10,7 +11,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import java.util.List;
-import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -22,6 +22,8 @@ public class CustomerManagerTest {
 
     @Autowired
     private CustomerRegistration customerRegistration;
+    @Autowired
+    private CustomerAdvantageRepository customerAdvantageRepository;
 
     private String name;
     private String mail;
@@ -38,6 +40,10 @@ public class CustomerManagerTest {
 
     @Test
     void registrationTest() throws MailAlreadyUsedException {
+        //assertTrue(false);
+
+
+
         Customer customer = customerRegistration.register(name, mail, password);
 
         assertEquals(name, customer.getName());
